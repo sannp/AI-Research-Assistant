@@ -37,10 +37,11 @@ const healthHandler = async (req: Request, res: Response) => {
         uptime: process.uptime(),
         timestamp: new Date().toISOString(),
         database: dbStatus,
+        port: PORT
     });
 };
 
-app.get("/api/health", healthHandler);
+app.get("/health", healthHandler);
 
 // Setup Socket Streaming Logic
 setupSocketStream(io);
