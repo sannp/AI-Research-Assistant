@@ -1,11 +1,13 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import http from "http";
 import { Server } from "socket.io";
 import dotenv from "dotenv";
 import { setupSocketStream, ClientEvents, ServerEvents } from "./socket/stream";
+import { pool, checkpointer } from "./services/supabase";
 
 dotenv.config();
 
+const PORT = process.env.PORT || 3000;
 const app = express();
 const server = http.createServer(app);
 
@@ -21,16 +23,27 @@ const io = new Server<ClientEvents, ServerEvents>(server, {
 app.use(express.json());
 
 // Health Check Endpoint (Required for Render.io)
-app.get("/health", (req, res) => {
-    res.status(200).json({ status: "OK", port: PORT });
-});
+const healthHandler = async (req: Request, res: Response) => {
+    let dbStatus = "unknown";
+    try {
+        await pool.query('SELECT 1');
+        dbStatus = "connected";
+    } catch (error) {
+        dbStatus = "disconnected";
+    }
 
-import { checkpointer } from "./services/supabase";
+    res.status(200).json({
+        status: "OK",
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        database: dbStatus,
+    });
+};
+
+app.get("/api/health", healthHandler);
 
 // Setup Socket Streaming Logic
 setupSocketStream(io);
-
-const PORT = process.env.PORT || 3000;
 
 async function startServer() {
     try {
