@@ -5,7 +5,7 @@
  *   Frontend → Backend:  research:start, research:rewind
  *   Backend → Frontend:  agent:node_start, agent:thought, agent:token, agent:error, agent:complete
  *
- * When VITE_WS_URL is set, connects via Socket.io.
+ * When VITE_API_URL is set, connects via Socket.io.
  * Otherwise falls back to the local mock-streaming simulation.
  */
 
@@ -42,7 +42,7 @@ function createSocketService(): ResearchService {
   async function ensureSocket() {
     if (socket) return socket;
     const { io } = await import('socket.io-client');
-    const url = import.meta.env.VITE_WS_URL as string;
+    const url = import.meta.env.VITE_API_URL as string;
     socket = io(url, { transports: ['websocket', 'polling'] });
     return socket;
   }
@@ -100,9 +100,9 @@ function createSocketService(): ResearchService {
 
 // ── Factory ─────────────────────────────────────────────────────────
 export function createResearchService(): ResearchService {
-  const wsUrl = import.meta.env.VITE_WS_URL;
+  const wsUrl = import.meta.env.VITE_API_URL;
   if (!wsUrl) {
-    console.warn('[ResearchService] VITE_WS_URL is not set');
+    console.warn('[ResearchService] VITE_API_URL is not set');
   } else {
     console.log('[ResearchService] Using Socket.io →', wsUrl);
   }

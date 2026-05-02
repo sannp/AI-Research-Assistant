@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
-const BACKEND_URL = import.meta.env.VITE_WS_URL || '';
+const BACKEND_URL = import.meta.env.VITE_API_URL || '';
 const HEALTH_ENDPOINT = `${BACKEND_URL}/health`;
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
