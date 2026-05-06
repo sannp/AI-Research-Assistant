@@ -5,7 +5,7 @@
  *   Frontend → Backend:  research:start, research:rewind
  *   Backend → Frontend:  agent:node_start, agent:thought, agent:token, agent:error, agent:complete
  *
- * When VITE_API_URL is set, connects via Socket.io.
+ * When VITE_BACKEND_URL is set, connects via Socket.io.
  * Otherwise falls back to the local mock-streaming simulation.
  */
 
@@ -42,8 +42,27 @@ function createSocketService(): ResearchService {
   async function ensureSocket() {
     if (socket) return socket;
     const { io } = await import('socket.io-client');
-    const url = import.meta.env.VITE_API_URL as string;
-    socket = io(url, { transports: ['websocket', 'polling'] });
+    const url = import.meta.env.VITE_BACKEND_URL as string;
+    const secret = import.meta.env.VITE_API_SECRET as string;
+
+    socket = io(url, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
+      auth: {
+        token: secret
+      },
+      extraHeaders: {
+        'x-api-secret': secret
+      }
+    });
+
+    socket.on('connect_error', (err: any) => {
+      console.error('[ResearchService] Connection error:', err.message);
+      if (err.message.includes('Unauthorized') || err.message.includes('auth')) {
+        console.error('[ResearchService] Authentication failed. Please check your API secret.');
+      }
+    });
+
     return socket;
   }
 
@@ -81,6 +100,13 @@ function createSocketService(): ResearchService {
         cb.onComplete(report);
       });
 
+      s.off('connect_error').on('connect_error', (err: any) => {
+        const msg = err.message.includes('Unauthorized') || err.message.includes('auth')
+          ? 'Authentication failed: Invalid API secret.'
+          : `Connection error: ${err.message}`;
+        cb.onError(msg);
+      });
+
       s.emit('research:start', { query, threadId });
     },
 
@@ -100,9 +126,9 @@ function createSocketService(): ResearchService {
 
 // ── Factory ─────────────────────────────────────────────────────────
 export function createResearchService(): ResearchService {
-  const wsUrl = import.meta.env.VITE_API_URL;
+  const wsUrl = import.meta.env.VITE_BACKEND_URL;
   if (!wsUrl) {
-    console.warn('[ResearchService] VITE_API_URL is not set');
+    console.warn('[ResearchService] VITE_BACKEND_URL is not set');
   } else {
     console.log('[ResearchService] Using Socket.io →', wsUrl);
   }

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || '';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 const HEALTH_ENDPOINT = `${BACKEND_URL}/health`;
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -16,13 +16,22 @@ export function useHealthCheck() {
         const checkHealth = async () => {
             try {
                 const startTime = Date.now();
-                const response = await fetch(HEALTH_ENDPOINT);
+                const response = await fetch(HEALTH_ENDPOINT, {
+                    headers: {
+                        'x-api-secret': import.meta.env.VITE_API_SECRET || '',
+                    },
+                });
                 const duration = Date.now() - startTime;
 
                 if (response.ok) {
                     // If the first check took longer than 3 seconds, it means the server likely spun up from sleep.
                     if (isFirstCheck.current && duration > 3000) {
                         toast.success('Backend server is awake and ready!');
+                    }
+                } else if (response.status === 401) {
+                    console.error('[HealthCheck] Unauthorized: API secret is missing or invalid.');
+                    if (isFirstCheck.current) {
+                        toast.error('Authentication failed: Invalid API secret.');
                     }
                 } else {
                     console.warn('[HealthCheck] Backend returned non-200 status:', response.status);
